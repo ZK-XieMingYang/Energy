@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<!DOCTYPE mapper PUBLIC "-//mybatis.org/DTD Mapper 3.0" "http://mybatis.org/dtd/mybatis-3-mapper.dtd"> 
+<mapper namespace="com.qhit.baseDevice.dao.IBaseDeviceDao"> 
+	<!-- 自定义结果集 -->
+	<resultMap id="BaseResultMap" type="com.qhit.baseDevice.pojo.BaseDevice">
+		<id property="devid" column="devid"></id>
+		<result property="devdate" column="devdate"></result>
+		<result property="compid" column="compid"></result>
+		<result property="devname" column="devname"></result>
+		<result property="typeid" column="typeid"></result>
+		<result property="devuser" column="devuser"></result>
+		<association property="baseCompany" javaType="com.qhit.baseCompany.pojo.BaseCompany">
+			<result property="address" column="address"></result>
+			<result property="compid" column="compid"></result>
+			<result property="industry" column="industry"></result>
+			<result property="comptel" column="comptel"></result>
+			<result property="compname" column="compname"></result>
+			<result property="contacts" column="contacts"></result>
+		</association>
+		<association property="baseDevtype" javaType="com.qhit.baseDevtype.pojo.BaseDevtype">
+			<result property="typeid" column="typeid"></result>
+			<result property="typename" column="typename"></result>
+		</association>
+	</resultMap>
+	<resultMap id="devInfoResult" type="com.qhit.baseDevice.pojo.DevInfo">
+		<result property="companame" column="companame"></result>
+		<result property="devType" column="devType"></result>
+		<result property="conunt" column="amount"></result>
+	</resultMap>
+
+	<!-- 在各种标签中，id属性必须与接口中的方法名一样，id的值必须是唯一的，parameterType指查询时使用的参数类型， 
+	resultType属性指明查询返回的结果集类型    --> 
+ 
+	<sql id="Base_Column_List" > 
+		devid,devname,typeid,devdate,devuser,compid 
+	</sql> 
+	<select id="findById" resultMap="BaseResultMap" parameterType="java.lang.Integer" > 
+		select 
+		<include refid="Base_Column_List" /> 
+		from base_device 
+		where devid = #{devid} 
+	</select> 
+	<delete id="delete" parameterType="java.lang.Integer" > 
+		delete from base_device 
+		where devid = #{devid} 
+	</delete> 
+	<insert id="insert" parameterType="com.qhit.baseDevice.pojo.BaseDevice" > 
+		insert into base_device(devname,typeid,devdate,devuser,compid) 
+		values (#{devname},#{typeid},#{devdate},#{devuser},#{compid}) 
+	</insert> 
+	<update id="updateSelective" parameterType="com.qhit.baseDevice.pojo.BaseDevice" > 
+		update base_device 
+		<set > 
+			<if test="devname != null and devname!='' " > 
+				devname = #{devname}, 
+			</if> 
+			<if test="typeid != null and typeid!='' " > 
+				typeid = #{typeid}, 
+			</if> 
+			<if test="devdate != null and devdate!='' " > 
+				devdate = #{devdate}, 
+			</if> 
+			<if test="devuser != null and devuser!='' " > 
+				devuser = #{devuser}, 
+			</if> 
+			<if test="compid != null and compid!='' " > 
+				compid = #{compid}, 
+			</if> 
+		</set> 
+		where devid = #{devid} 
+	</update> 
+	<update id="update" parameterType="com.qhit.baseDevice.pojo.BaseDevice" > 
+		update base_device 
+		set  devname = #{devname}, typeid = #{typeid}, devdate = #{devdate}, devuser = #{devuser}, compid = #{compid} 
+		where devid = #{devid} 
+	</update> 
+	<select id="findAll" resultMap="BaseResultMap" > 
+SELECT * FROM base_device bd JOIN base_devtype bdt ON bd.typeid=bdt.typeid JOIN base_company bc ON bd.compid=bc.compid
+	</select> 
+	<select id="findByDevname" resultMap="BaseResultMap" parameterType="java.lang.String" > 
+		select 
+		<include refid="Base_Column_List" /> 
+		from base_device 
+		where devname = #{devname} 
+	</select> 
+	<select id="findByTypeid" resultMap="BaseResultMap" parameterType="java.lang.Integer" > 
+		select 
+		<include refid="Base_Column_List" /> 
+		from base_device 
+		where typeid = #{typeid} 
+	</select> 
+	<select id="findByDevdate" resultMap="BaseResultMap" parameterType="java.lang.String" > 
+		select 
+		<include refid="Base_Column_List" /> 
+		from base_device 
+		where devdate = #{devdate} 
+	</select> 
+	<select id="findByDevuser" resultMap="BaseResultMap" parameterType="java.lang.String" > 
+		select 
+		<include refid="Base_Column_List" /> 
+		from base_device 
+		where devuser = #{devuser} 
+	</select> 
+	<select id="findByCompid" resultMap="BaseResultMap" parameterType="java.lang.Integer" > 
+		select 
+		<include refid="Base_Column_List" /> 
+		from base_device 
+		where compid = #{compid} 
+	</select>
+	<select id="getUsage" resultType="map" parameterType="java.lang.Integer">
+		SELECT bc.compname,bdt.typename AS devType,CONCAT(ROUND(SUM(pj.duration)/(COUNT(DISTINCT(bd.devid))*365*24)*100,2),"%") AS radio FROM produce_job pj JOIN base_device bd ON bd.devid=pj.devid
+		JOIN base_company bc ON bd.compid=bc.compid JOIN base_devtype bdt ON bd.typeid=bdt.typeid
+		WHERE YEAR(pj.starttime)=#{year}
+		GROUP BY bc.compname,bdt.typename
+	</select>
+	<select id="getintactRatio" resultType="map" parameterType="java.lang.Integer">
+		SELECT bc.compname,bdt.typename AS devType,CONCAT(ROUND((SUM(pj.duration)-SUM(IFNULL(pf.faulttime/60,0)))/SUM(pj.duration),2)*100,"%") AS radio
+		FROM produce_job pj JOIN base_device bd ON bd.devid=pj.devid LEFT JOIN produce_fault pf ON pf.devid=bd.devid
+		JOIN base_company bc ON bd.compid=bc.compid JOIN base_devtype bdt ON bd.typeid=bdt.typeid
+		WHERE YEAR(pj.starttime)=#{year}
+		GROUP BY bc.compname,bdt.typename
+	</select>
+	<select id="getcost" resultType="map" >
+		SELECT bd.devname AS dev,ROUND(SUM(pj.amount),2)AS amount,ROUND(SUM(ec.electric)*(SELECT es.ratio FROM energy_standradcoal es WHERE es.energetype='electric')+
+		SUM(ec.water)*(SELECT es.ratio FROM energy_standradcoal es WHERE es.energetype='water')+
+		SUM(ec.oil)*(SELECT es.ratio FROM energy_standradcoal es WHERE es.energetype='oil'),2) AS consume,
+		(SELECT SUM(prr.cost) FROM produce_repair prr WHERE prr.devid=bd.devid AND YEAR(prr.repairdate)=#{year} GROUP BY prr.devid)  AS cost
+		FROM produce_job pj JOIN base_device bd ON bd.devid=pj.devid JOIN energy_consume ec ON ec.reportid=pj.reportid
+		WHERE YEAR(pj.starttime)=#{year} AND pj.devid=ec.devid AND bd.compid=#{compid}
+		GROUP BY bd.devname
+	</select>
+	<select id="getamount" resultType="map" parameterType="java.lang.Integer">
+		SELECT bc.compname,bdt.typename AS devType,ROUND(SUM(pj.amount),2)  AS amount FROM produce_job pj
+		JOIN base_device bd ON bd.devid=pj.devid JOIN base_devtype bdt ON bdt.typeid=bd.typeid
+		JOIN base_company bc ON bc.compid=bd.compid
+		WHERE YEAR(pj.starttime)=#{year}
+		GROUP BY bd.compid,bdt.typename
+	</select>
+	<select id="getconsume" resultType="map" parameterType="java.lang.Integer">
+		SELECT  bc.compname,bdt.typename AS devType,ROUND(SUM(ec.electric)*(SELECT es.ratio FROM energy_standradcoal es WHERE es.energetype='electric')+
+		SUM(ec.water)*(SELECT es.ratio FROM energy_standradcoal es WHERE es.energetype='water')+
+		SUM(ec.oil)*(SELECT es.ratio FROM energy_standradcoal es WHERE es.energetype='oil')) AS consume
+		FROM energy_consume ec JOIN base_device bd ON ec.devid=bd.devid JOIN base_devtype bdt ON bdt.typeid=bd.typeid
+		JOIN base_company bc ON bc.compid=bd.compid JOIN produce_report pr ON pr.reportid=ec.reportid
+		WHERE YEAR(pr.startjobtime)=#{year}
+		GROUP BY bd.compid,bdt.typename
+	</select>
+	<delete id="deleteBatch" parameterType="java.util.Arrays"> 
+		delete from base_device where devid in 
+		<foreach collection="array" item="id" open="(" close=")" separator=","> 
+			#{id} 
+		</foreach> 
+	</delete> 
+	<select id="search" parameterType="com.qhit.baseDevice.pojo.BaseDevice" resultMap="BaseResultMap">
+		SELECT * FROM base_device bd JOIN base_devtype bdt ON bd.typeid=bdt.typeid JOIN base_company bc ON bd.compid=bc.compid
+		<where > 
+			<if test="devname != null and devname!='' " >
+				 and bd.devname = #{devname}
+			</if> 
+			<if test="typeid != null and typeid!='' " > 
+				 and bd.typeid = #{typeid}
+			</if> 
+			<if test="devdate != null and devdate!='' " > 
+				 and bd.devdate = #{devdate}
+			</if> 
+			<if test="devuser != null and devuser!='' " > 
+				 and bd.devuser = #{devuser}
+			</if> 
+			<if test="compid != null and compid!='' " > 
+				 and bd.compid = #{compid}
+			</if> 
+		</where> 
+	</select> 
+</mapper> 
